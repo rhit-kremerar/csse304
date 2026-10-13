@@ -17,7 +17,10 @@
 ;; of lambda.
 
 (define-syntax (mylet* stx)
-  #'(quote nyi))
+  (syntax-case stx ()
+    [(_ (mapping) bodies ...) #'(let (mapping) bodies ...)]
+    [(mylet* (mapping more-mappings ...) bodies ...)
+     #'(let (mapping) (mylet* (more-mappings ...) bodies ...))]))
 
 ;; Usage
 ;; (mylet* ((a 2) (b (+ 1 a))) (+ a b)) yields 5
@@ -28,15 +31,20 @@
 ;;
 ;; Note that this implementation is buggy
 
+;(define-syntax (repeat stx)
+;  (syntax-case stx ()
+;    [(_ numExp repeatExp ) #'(let repeatme ((count 0))
+;                               (if (= count numExp)
+;                                   (void)
+;                                   (begin
+;                                     repeatExp
+;                                     (repeatme (add1 count)))))]))
+
 (define-syntax (repeat stx)
   (syntax-case stx ()
-    [(_ numExp repeatExp ) #'(let repeatme ((count 0))
-                               (if (= count numExp)
-                                   (void)
-                                   (begin
-                                     repeatExp
-                                     (repeatme (add1 count)))))]))
-
+    [(_ 1 repeatExp ) #'repeatExp
+    [(_ numExp repeatExp) #'(repeatExp (repeat (- numExp 1) repeatExp))
+                          
 ;; IN CLASS EXERCISE REPEAT
 ;; Make a second form of repeat that has variable parameter that you can
 ;; use within the body
@@ -49,9 +57,9 @@
 
 ;; IN CLASS EXERCISE LIST LET
 ;; (listlet (a b c) mylist
-       ;; in the body a is mapped to (car mylist)
-       ;; b is mapped to (cadr mylist)
-       ;; c is mapped to (caddr mylist))
+;; in the body a is mapped to (car mylist)
+;; b is mapped to (cadr mylist)
+;; c is mapped to (caddr mylist))
 
 (define-syntax (listlet stx)
   (syntax-case stx ()
@@ -60,11 +68,11 @@
     [(listlet (var vars ...) exp body ...)
      #'(quote nyi)]))
 
- (let ((mylist (list 1 2 3 4)))
-    (listlet (a b c d) mylist (list (+ a b) (+ c d)))) 
+(let ((mylist (list 1 2 3 4)))
+  (listlet (a b c d) mylist (list (+ a b) (+ c d)))) 
 ; should yield '(3 7)
 
- (listlet (a b c) (list (display "x") (display "y") (display "z")) (cons a (cons b c)))
+(listlet (a b c) (list (display "x") (display "y") (display "z")) (cons a (cons b c)))
 ; should print xyz and return '(#<void> #<void> . #<void>)
 
 
@@ -76,10 +84,10 @@
     (datum->syntax stx
                    (list 'quote (let recur ([num 0]
                                             [syms (cdr (syntax->datum stx))])
-                                      (if (null? syms)
-                                          '()
-                                          (cons (cons (car syms) num)
-                                                (recur (add1 num) (cdr syms)))))))))
+                                  (if (null? syms)
+                                      '()
+                                      (cons (cons (car syms) num)
+                                            (recur (add1 num) (cdr syms)))))))))
 
 (numed-syms a b c)
 
@@ -132,13 +140,13 @@
 
 (begin-for-syntax
 
-(define to-num-pairs
-  (lambda (initial-num sym-list)
-    (if (null? sym-list)
-        '()
-        (cons (cons (car sym-list) initial-num)
-              (to-num-pairs (add1 initial-num) (cdr sym-list))))))
-)
+  (define to-num-pairs
+    (lambda (initial-num sym-list)
+      (if (null? sym-list)
+          '()
+          (cons (cons (car sym-list) initial-num)
+                (to-num-pairs (add1 initial-num) (cdr sym-list))))))
+  )
 
 (define-syntax numed-syms2
   (lambda (stx)

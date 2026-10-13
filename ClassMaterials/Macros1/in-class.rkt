@@ -10,7 +10,7 @@
       (printf "transforming ~s~n" code)
       (unless (symbol? (cadr code))
         (raise-syntax-error "zero! non symbol" stx))
-      (let ((result (list 'set! (cadr code) 0)))
+      (let ((result (list 'set! (cadr code) 0))) ; (begin (print here) (set! VARNAME 0))
         (printf "produced ~s~n" result)
         (datum->syntax stx result)))))
 
@@ -29,18 +29,23 @@
 
 (define-syntax BW
   (lambda (stx)
-    (datum->syntax stx '(quote nyi))))
+    (let ((code (syntax->datum stx)))
+      (datum->syntax stx (reverse (cdr code))))))
 
 ;; IN CLASS EXAMPLE SWAP
 
 (define-syntax (swap stx)
   (syntax-case stx ()
+    
     [(swap x y)
      #'(let ([tmp x])
          (set! x y)
-         (set! y tmp))]))
+         (set! y tmp)
+         (print x)
+         (print y))]))
 
-(define myvar2 99)
+(set! myvar1 'myvar1)
+(define myvar2 'myvar2)
 (swap myvar1 myvar2) ; myval1s value goes in myvar2 and vice versa
 
 ;; EXERCISE classic-if
@@ -70,7 +75,7 @@
 
 (define-syntax (dupsyms stx)
   (syntax-case stx ()
-    [(_ sym ...) #'(quote nyi)]))
+    [(_ sym ...) #'()]))
 
 ;; EXERCISE MYWHEN
 ;;

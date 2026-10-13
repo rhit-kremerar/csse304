@@ -58,6 +58,9 @@
 ; datatype for procedures.  At first there is only one
 ; kind of procedure, but more kinds will be added later.
 
+;ADD NEW TYPE FOR LAMBDA EXP. IT PRODUCES THIS
+;will have 3 fields: list of var names, code/body expression datatype, environment var which will be version at time of creation
+
 (define-datatype proc-val proc-val?
   [prim-proc
    (name symbol?)])
@@ -178,31 +181,49 @@
 (define top-level-eval
   (lambda (form)
     ; later we may add things that are not expressions.
-    (eval-exp form)))
+    (eval-exp init-env form)))
 
 ; eval-exp is the main component of the interpreter
 
+;MAYBE USE DEFINE CONTRACT. VERIFY PARAMETERS
+;right now theres one proc apply-env. you want two, apply-env-local and apply-env-global.
+;if local fails goes to global. if global fails it stops
+;lambda process: lambda expression,
+;evaluating lambda returns data struc
+
 (define eval-exp
-  (lambda (exp)
+  (lambda (env exp)
     (cases expression exp
       [lit-exp (datum) datum]
       [var-exp (id)
-               (apply-env init-env id)]
+               (apply-env env id)]
+      [if-exp (test-exp then-exp else-exp)
+              (if (eval-exp env test-exp)
+                  (eval-exp env then-exp)
+                  (eval-exp env else-exp))]
+      [let-exp (vars var-exps bodies)
+               (let ((new-env (extended-env-record
+                               vars
+                               (list (eval-exp env (car var-exps)))
+                               env)))
+               (eval-exp new-env (car bodies)))]
       [app-exp (rator rands)
-               (let ([proc-value (eval-exp rator)]
-                     [args (eval-rands rands)])
+               (let ([proc-value (eval-exp env rator)]
+                     [args (eval-rands env rands)])
                  (apply-proc proc-value args))]
       [else (error 'eval-exp "Bad abstract syntax: ~a" exp)])))
 
 ; evaluate the list of operands, putting results into a list
 
 (define eval-rands
-  (lambda (rands)
-    (map eval-exp rands)))
+  (lambda (env rands)
+    (map (lambda (x) (eval-exp env x)) rands)))
 
 ;  Apply a procedure to its arguments.
 ;  At this point, we only have primitive procedures.  
 ;  User-defined procedures will be added later.
+
+;ADD NEW CASE FOR LAMBDA
 
 (define apply-proc
   (lambda (proc-value args)
